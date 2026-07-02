@@ -1,0 +1,164 @@
+<main class="app-shell">
+  <section class="workspace">
+    <div class="intro">
+      <p class="eyebrow">Car Advisor</p>
+      <h1>Turn a messy shortlist into a confident decision.</h1>
+      <p class="lead">
+        Tell the advisor what matters, then compare ranked cars with concrete reasons.
+      </p>
+    </div>
+
+    <form class="query-panel" [formGroup]="form" (ngSubmit)="recommend()">
+      <label>
+        Buying situation
+        <textarea formControlName="queryText" rows="4" maxlength="2000" placeholder="Example: I drive mostly in the city, need a safe automatic SUV under 18 lakhs."></textarea>
+      </label>
+      <p class="field-error" *ngIf="form.controls.queryText.hasError('minlength')">
+        Buying situation must be at least 10 characters.
+      </p>
+      <p class="field-error" *ngIf="form.controls.queryText.hasError('maxlength')">
+        Buying situation must be 2000 characters or fewer.
+      </p>
+
+      <div class="field-row">
+        <label>
+          Min budget
+          <input type="number" formControlName="budgetMin" min="0" step="0.5">
+        </label>
+        <label>
+          Max budget
+          <input type="number" formControlName="budgetMax" min="0" step="0.5">
+        </label>
+      </div>
+      <p class="field-error" *ngIf="form.hasError('budgetRange')">
+        Maximum budget must be greater than or equal to minimum budget.
+      </p>
+
+      <div class="field-row">
+        <label>
+          Body type
+          <select formControlName="bodyType">
+            <option value="">Any</option>
+            <option *ngFor="let bodyType of filterOptions.bodyTypes" [value]="bodyType">{{ bodyType }}</option>
+          </select>
+        </label>
+        <label>
+          Fuel type
+          <select formControlName="fuelType">
+            <option value="">Any</option>
+            <option *ngFor="let fuelType of filterOptions.fuelTypes" [value]="fuelType">{{ fuelType }}</option>
+          </select>
+        </label>
+      </div>
+
+      <button type="submit" [disabled]="form.invalid || loading">
+        {{ loading ? 'Finding matches...' : 'Recommend cars' }}
+      </button>
+    </form>
+
+    <form class="lookup-panel" [formGroup]="lookupForm" (ngSubmit)="loadSavedRecommendation()">
+      <label>
+        Load saved query
+        <div class="lookup-row">
+          <input type="number" formControlName="queryId" min="1" placeholder="Query id">
+          <button type="submit" [disabled]="lookupForm.invalid || loading">
+            Load
+          </button>
+        </div>
+      </label>
+    </form>
+
+    <section class="recent-panel" *ngIf="recentQueries.length">
+      <div class="catalog-header">
+        <p class="eyebrow">Recent</p>
+        <span>{{ recentQueries.length }} saved</span>
+      </div>
+
+      <button class="recent-item" type="button" *ngFor="let query of recentQueries" (click)="loadSavedRecommendation(query.id)">
+        <span>#{{ query.id }}</span>
+        <span class="recent-copy">
+          <strong>{{ query.queryText }}</strong>
+          <small>{{ query.createdAt | date:'mediumDate' }}</small>
+        </span>
+      </button>
+    </section>
+
+    <section class="catalog-panel" *ngIf="cars.length">
+      <div class="catalog-header">
+        <p class="eyebrow">Catalog</p>
+        <span>{{ cars.length }} cars loaded</span>
+      </div>
+
+      <div class="catalog-list">
+        <article class="catalog-item" *ngFor="let car of cars">
+          <img [src]="car.imageUrl" [alt]="car.make + ' ' + car.model">
+          <div>
+            <h3>{{ car.make }} {{ car.model }}</h3>
+            <p>{{ car.variant }} - Rs {{ car.priceInLakhs }}L</p>
+            <div class="mini-specs">
+              <span>{{ car.bodyType }}</span>
+              <span>{{ car.fuelType }}</span>
+              <span>{{ car.transmission }}</span>
+              <span>{{ car.mileage }} km/l</span>
+              <span>{{ car.seatingCapacity }} seats</span>
+              <span>{{ car.safetyRating }}/5 safety</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </section>
+
+  <section class="results-panel" *ngIf="recommendation; else waitingForRecommendation">
+    <div class="results-header">
+      <div>
+        <p class="eyebrow">Shortlist</p>
+        <h2>{{ recommendation.results.length }} recommended cars</h2>
+      </div>
+      <span>Query #{{ recommendation.queryId }}</span>
+    </div>
+    <div class="query-summary">
+      <p>{{ recommendation.queryText }}</p>
+      <div class="summary-tags">
+        <span *ngIf="recommendation.budgetMin !== null || recommendation.budgetMax !== null">
+          Rs {{ recommendation.budgetMin || 0 }}L - {{ recommendation.budgetMax || 'Any' }}L
+        </span>
+        <span *ngIf="recommendation.bodyType">{{ recommendation.bodyType }}</span>
+        <span *ngIf="recommendation.fuelType">{{ recommendation.fuelType }}</span>
+        <span>{{ recommendation.createdAt | date:'medium' }}</span>
+      </div>
+    </div>
+
+    <article class="car-card" *ngFor="let item of recommendation.results">
+      <img [src]="item.car.imageUrl" [alt]="item.car.make + ' ' + item.car.model">
+      <div class="car-copy">
+        <div class="rank">#{{ item.rank }}</div>
+        <h3>{{ item.car.make }} {{ item.car.model }}</h3>
+        <p>{{ item.car.variant }} - {{ item.car.segment }}</p>
+        <div class="specs">
+          <span>Rs {{ item.car.priceInLakhs }}L</span>
+          <span>{{ item.car.bodyType }}</span>
+          <span>{{ item.car.fuelType }}</span>
+          <span>{{ item.car.transmission }}</span>
+          <span>{{ item.car.mileage }} km/l</span>
+          <span>{{ item.car.safetyRating }}/5 safety</span>
+        </div>
+        <p class="reason">{{ item.reason }}</p>
+      </div>
+    </article>
+  </section>
+
+  <section class="empty-panel" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </section>
+</main>
+
+<ng-template #waitingForRecommendation>
+  <section class="waiting-panel">
+    <p class="eyebrow">Shortlist</p>
+    <h2>Ready when you are.</h2>
+    <p>
+      Add your budget, preferred body type, fuel choice, and buying situation to get a ranked list with saved reasons.
+    </p>
+  </section>
+</ng-template>
