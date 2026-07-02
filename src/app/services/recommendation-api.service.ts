@@ -8,7 +8,7 @@ import { RecommendationQuerySummary, RecommendationRequest, RecommendationRespon
 })
 export class RecommendationApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/ai/recommendations';
+  private readonly baseUrl = 'https://car-advisor-backend.onrender.com/api/ai/recommendations';
 
   recommend(request: RecommendationRequest): Observable<RecommendationResponse> {
     return this.http.post<RecommendationResponse>(this.baseUrl, request);
@@ -22,3 +22,4 @@ export class RecommendationApiService {
     return this.http.get<RecommendationQuerySummary[]>(this.baseUrl);
   }
 }
+
